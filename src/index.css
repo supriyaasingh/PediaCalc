@@ -1,7 +1,10 @@
 @import "tailwindcss";
 
 @layer base {
-  body {
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     color: #0f172a;
     background-color: #f8fafc;
@@ -11,6 +14,15 @@
   code, pre, .font-mono {
     font-family: 'JetBrains Mono', monospace;
   }
+}
+
+/* Utility to hide scrollbars on mobile tab strips while preserving touch scrolling */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 @media print {

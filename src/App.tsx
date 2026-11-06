@@ -27,6 +27,7 @@ import {
   HelpCircle,
   Info,
   Loader2,
+  Menu,
   Pill,
   Plus,
   Printer,
@@ -81,6 +82,8 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResponse, setSearchResponse] = useState<SearchResponse | null>(null);
   const [showAmbiguityModal, setShowAmbiguityModal] = useState<boolean>(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState<boolean>(false);
 
   // AI Assistant Tab State
   const [aiPrompt, setAiPrompt] = useState<string>('What is the recommended dose of Augmentin Duo for a child with acute otitis media?');
@@ -542,14 +545,14 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans w-full max-w-full overflow-x-hidden">
       {/* Top Clinical Safety Banner */}
-      <div className="bg-amber-500 text-slate-950 px-4 py-2 text-xs font-medium flex items-center justify-between border-b border-amber-600">
-        <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 text-slate-950 shrink-0" />
-            <span>
-              <strong>Clinical Decision-Support Notice:</strong> Prototype for verified calculation and clinical validation. Does not replace professional prescribing judgment.
+      <div className="bg-amber-500 text-slate-950 px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-medium border-b border-amber-600 w-full">
+        <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <ShieldAlert className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-950 shrink-0" />
+            <span className="text-[11px] sm:text-xs leading-tight sm:leading-normal">
+              <strong>Clinical Decision-Support:</strong> Verified calculation prototype. Does not replace prescribing judgment.
             </span>
           </div>
           <div className="hidden sm:flex items-center gap-3 text-slate-900 text-xs shrink-0 font-mono">
@@ -583,29 +586,29 @@ export default function App() {
       </div>
 
       {/* Main Clinical Navigation Bar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-sm">
-              <HeartPulse className="w-6 h-6" />
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs w-full">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-xs">
+              <HeartPulse className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-bold tracking-tight text-slate-900">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
                   Pedi<span className="text-teal-600">Dose</span>
                 </span>
-                <span className="text-[10px] font-semibold bg-teal-50 text-teal-700 border border-teal-200 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                <span className="text-[9px] sm:text-[10px] font-semibold bg-teal-50 text-teal-700 border border-teal-200 px-1.5 py-0.5 rounded uppercase tracking-wider">
                   Pro Clinical
                 </span>
               </div>
-              <p className="text-xs text-slate-500 hidden md:block">
+              <p className="text-[11px] text-slate-500 hidden md:block">
                 Advanced Pediatric Medication & Dosage Calculation Platform
               </p>
             </div>
           </div>
 
-          {/* Quick Search Bar in Header */}
-          <div className="flex-1 max-w-md hidden sm:block">
+          {/* Quick Search Bar in Header - Desktop & Tablet */}
+          <div className="flex-1 max-w-md hidden md:block">
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               <input
@@ -621,7 +624,7 @@ export default function App() {
                     setSearchQuery('');
                     setSearchResponse(null);
                   }}
-                  className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -629,11 +632,11 @@ export default function App() {
             </div>
           </div>
 
-          {/* Navigation Tabs */}
-          <nav className="flex items-center gap-1 shrink-0">
+          {/* Navigation Tabs - Desktop (lg+) */}
+          <nav className="hidden lg:flex items-center gap-1 shrink-0">
             <button
               onClick={() => setActiveTab('calculator')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'calculator'
                   ? 'bg-teal-600 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -645,7 +648,7 @@ export default function App() {
 
             <button
               onClick={() => setActiveTab('database')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'database'
                   ? 'bg-teal-600 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -657,7 +660,7 @@ export default function App() {
 
             <button
               onClick={() => setActiveTab('safety')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'safety'
                   ? 'bg-amber-600 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -672,7 +675,7 @@ export default function App() {
 
             <button
               onClick={() => setActiveTab('ai')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'ai'
                   ? 'bg-teal-600 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -684,7 +687,7 @@ export default function App() {
 
             <button
               onClick={() => setActiveTab('who')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'who'
                   ? 'bg-teal-600 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -696,7 +699,7 @@ export default function App() {
 
             <button
               onClick={() => setActiveTab('system')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'system'
                   ? 'bg-slate-800 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -706,14 +709,203 @@ export default function App() {
               <span>System & Tests</span>
             </button>
           </nav>
+
+          {/* Mobile Action Controls (< lg) */}
+          <div className="flex lg:hidden items-center gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                setMobileSearchOpen(!mobileSearchOpen);
+                if (mobileMenuOpen) setMobileMenuOpen(false);
+              }}
+              className={`p-2 rounded-lg text-xs transition-colors cursor-pointer ${
+                mobileSearchOpen
+                  ? 'bg-teal-50 text-teal-700'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+              title="Search Medications"
+              aria-label="Search Medications"
+            >
+              <Search className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(!mobileMenuOpen);
+                if (mobileSearchOpen) setMobileSearchOpen(false);
+              }}
+              className={`p-2 rounded-lg text-xs transition-colors relative cursor-pointer ${
+                mobileMenuOpen
+                  ? 'bg-slate-100 text-slate-900'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+              title="Toggle Menu"
+              aria-label="Toggle navigation menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {safetyAudit.safetyStatus === 'CRITICAL_STOP' && (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Search Overlay Bar */}
+        {mobileSearchOpen && (
+          <div className="lg:hidden px-3 py-2 bg-slate-50 border-t border-slate-200 animate-in fade-in">
+            <div className="relative w-full">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                placeholder="Search generic, brand, symptoms..."
+                className="w-full pl-9 pr-8 py-2 text-xs text-slate-900 bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSearchResponse(null);
+                  }}
+                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Dropdown Navigation Menu (< lg) */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden bg-white border-t border-slate-200 px-3 py-3 space-y-1 shadow-lg animate-in slide-in-from-top-2">
+            {[
+              { id: 'calculator', label: 'Pediatric Calculator', sub: 'Weight & Indication dosing', icon: Calculator },
+              { id: 'database', label: 'Verified Drug Database', sub: 'India & International Formulary', icon: Database },
+              {
+                id: 'safety',
+                label: 'Clinical Safety Engine',
+                sub: 'Interactions, allergies & warnings',
+                icon: ShieldAlert,
+                alert: safetyAudit.safetyStatus === 'CRITICAL_STOP',
+              },
+              { id: 'ai', label: 'AI Clinical Assistant', sub: 'Grounded Gemini query parser', icon: Sparkles },
+              { id: 'who', label: 'WHO Growth Reference', sub: '0 to 10 year weight curves', icon: Activity },
+              { id: 'system', label: 'System Architecture & Tests', sub: 'Offline engine & validation suite', icon: Terminal },
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              const IconComp = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(tab.id as any);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-colors cursor-pointer ${
+                    isActive
+                      ? 'bg-teal-600 text-white font-bold shadow-xs'
+                      : 'hover:bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                        isActive
+                          ? 'bg-teal-700 text-white'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      <IconComp className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold truncate flex items-center gap-1.5">
+                        <span>{tab.label}</span>
+                        {tab.alert && (
+                          <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                        )}
+                      </div>
+                      <div
+                        className={`text-[10px] truncate ${
+                          isActive ? 'text-teal-100' : 'text-slate-400'
+                        }`}
+                      >
+                        {tab.sub}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                </button>
+              );
+            })}
+
+            {/* Mobile Connectivity & Safety Status Strip in Menu */}
+            <div className="pt-2 mt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-mono text-slate-600 px-1">
+              <span className="flex items-center gap-1.5">
+                {isOnline ? (
+                  <>
+                    <Wifi className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Online (v{DATABASE_METADATA.version})</span>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="w-3.5 h-3.5 text-amber-600" />
+                    <span className="text-amber-800 font-bold">Offline Mode</span>
+                  </>
+                )}
+              </span>
+              <span className="flex items-center gap-1 text-[10px] bg-slate-100 px-2 py-0.5 rounded">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                <span>Safety Verified</span>
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Horizontal Quick-Scroll Tabs (< lg) - One-tap access to all 6 tabs */}
+        <div className="flex lg:hidden overflow-x-auto no-scrollbar py-2 px-3 bg-slate-50/95 backdrop-blur-xs border-t border-slate-100 gap-1.5 shrink-0 w-full scroll-smooth">
+          {[
+            { id: 'calculator', label: 'Calculator', icon: Calculator },
+            { id: 'database', label: 'Drug DB', icon: Database },
+            { id: 'safety', label: 'Safety Engine', icon: ShieldAlert, alert: safetyAudit.safetyStatus === 'CRITICAL_STOP' },
+            { id: 'ai', label: 'AI Assistant', icon: Sparkles },
+            { id: 'who', label: 'WHO Growth', icon: Activity },
+            { id: 'system', label: 'System', icon: Terminal },
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            const IconComp = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition-colors cursor-pointer ${
+                  isActive
+                    ? 'bg-teal-600 text-white shadow-xs'
+                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <IconComp className="w-3.5 h-3.5 shrink-0" />
+                <span>{tab.label}</span>
+                {tab.alert && (
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse ml-0.5"></span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden">
         {/* TAB 1: CALCULATOR */}
         {activeTab === 'calculator' && (
-          <div className="max-w-2xl w-full mx-auto space-y-6">
+          <div className="max-w-3xl w-full mx-auto space-y-4 sm:space-y-6">
             {/* Offline Medication Not Found Notification */}
             {searchResponse && searchResponse.results.length === 0 && (
               <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded-xl p-4 text-xs text-amber-900 dark:text-amber-200 space-y-1 shadow-xs animate-in fade-in">
@@ -773,7 +965,7 @@ export default function App() {
               </div>
             )}
             {/* Simplified Single-Column Form Card */}
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 sm:p-7 space-y-5">
+            <div className="bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-3.5 sm:p-7 space-y-4 sm:space-y-5 w-full">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3.5">
                 <div>
                   <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -1347,49 +1539,49 @@ export default function App() {
                       </div>
 
                       {/* Clinical Parameters Grid Summary */}
-                      <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                        <div className="bg-white p-2.5 rounded-lg border border-slate-200">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Patient Weight</span>
+                      <div className="p-3 sm:p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-xs">
+                        <div className="bg-white p-2 sm:p-2.5 rounded-lg border border-slate-200 min-w-0">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block truncate">Patient Weight</span>
                           <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                             <span className="font-mono font-bold text-slate-900 text-sm">
                               {calculation.result.weightKg.toFixed(2)} kg
                             </span>
                             {calculation.result.isEstimatedWeight ? (
-                              <span className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded">
-                                ESTIMATED
+                              <span className="text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-1 py-0.2 rounded">
+                                ESTIMATE
                               </span>
                             ) : (
-                              <span className="text-[10px] font-medium bg-emerald-50 text-emerald-700 px-1.5 py-0.2 rounded">
+                              <span className="text-[9px] font-medium bg-emerald-50 text-emerald-700 px-1 py-0.2 rounded">
                                 Measured
                               </span>
                             )}
                           </div>
                         </div>
 
-                        <div className="bg-white p-2.5 rounded-lg border border-slate-200">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Formulation & Route</span>
+                        <div className="bg-white p-2 sm:p-2.5 rounded-lg border border-slate-200 min-w-0">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block truncate">Form & Route</span>
                           <span className="font-semibold text-slate-900 text-xs mt-1 block capitalize truncate">
                             {formulationType.replace('_', ' ')} ({administrationRoute})
                           </span>
                         </div>
 
-                        <div className="bg-white p-2.5 rounded-lg border border-slate-200">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Dose Basis</span>
-                          <span className="font-mono font-bold text-teal-800 text-xs mt-1 block">
+                        <div className="bg-white p-2 sm:p-2.5 rounded-lg border border-slate-200 min-w-0">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block truncate">Dose Basis</span>
+                          <span className="font-mono font-bold text-teal-800 text-xs mt-1 block truncate">
                             {doseValue} {doseBasis === 'mg_kg_day' ? 'mg/kg/day' : doseBasis === 'mg_kg_dose' ? 'mg/kg/dose' : 'mg fixed'}
                           </span>
                         </div>
 
-                        <div className="bg-white p-2.5 rounded-lg border border-slate-200">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Duration</span>
-                          <span className="font-semibold text-slate-900 text-xs mt-1 block">
+                        <div className="bg-white p-2 sm:p-2.5 rounded-lg border border-slate-200 min-w-0">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block truncate">Duration</span>
+                          <span className="font-semibold text-slate-900 text-xs mt-1 block truncate">
                             {treatmentDurationDays ? `${treatmentDurationDays} days` : 'Clinical response'}
                           </span>
                         </div>
                       </div>
 
                       {/* Prominent Dose Metrics */}
-                      <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-slate-100">
+                      <div className="p-3.5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 border-b border-slate-100">
                         {/* Single Dose Box */}
                         <div className="bg-teal-50/70 border-2 border-teal-500/40 rounded-xl p-4 relative overflow-hidden space-y-3">
                           <span className="text-[11px] font-bold text-teal-800 uppercase tracking-wider block">
@@ -1614,12 +1806,12 @@ export default function App() {
                       </div>
 
                       {/* Clinical Actions & Print/EHR Export */}
-                      <div className="p-4 bg-slate-100/90 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 print:hidden">
-                        <div className="flex items-center gap-2">
+                      <div className="p-3 sm:p-4 bg-slate-100/90 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                           <button
                             type="button"
                             onClick={handlePrintClinicalOrder}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition shadow-sm cursor-pointer"
+                            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition shadow-sm cursor-pointer"
                             title="Print / Save PDF of this dosage calculation"
                           >
                             <Printer className="w-3.5 h-3.5 text-slate-600" />
@@ -1628,7 +1820,7 @@ export default function App() {
                           <button
                             type="button"
                             onClick={handleCopyClinicalNote}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition shadow-sm cursor-pointer ${
+                            className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold border transition shadow-sm cursor-pointer ${
                               copiedNote
                                 ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-bold'
                                 : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
@@ -1648,7 +1840,7 @@ export default function App() {
                             )}
                           </button>
                         </div>
-                        <div className="text-[11px] text-slate-500 font-mono">
+                        <div className="text-[11px] text-slate-500 font-mono text-center sm:text-right">
                           Verified Calculation &bull; PediDose
                         </div>
                       </div>
