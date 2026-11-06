@@ -21,7 +21,7 @@
 
   /* Hide navigation, header banner, search modal, tab buttons when printing */
   header,
-  .print\\:hidden,
+  .print\:hidden,
   button,
   input,
   select {
