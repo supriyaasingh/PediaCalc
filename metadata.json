@@ -1,0 +1,6 @@
+{
+  "name": "PediDose - Pediatric Medication & Dosage Calculator",
+  "description": "Advanced clinical pediatric drug dosage calculator, safety validation engine, and verified medication database.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
