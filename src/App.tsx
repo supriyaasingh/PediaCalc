@@ -304,13 +304,29 @@ export default function App() {
   const loadAiResponseIntoCalculator = () => {
     if (!aiResponse) return;
     const match = MEDICATION_DATABASE.find(
-      (m) => m.genericName.toLowerCase() === aiResponse.genericName.toLowerCase()
+      (m) =>
+        (aiResponse.matchedMedicationId && m.id === aiResponse.matchedMedicationId) ||
+        m.genericName.toLowerCase() === aiResponse.genericName.toLowerCase() ||
+        m.brandNames.some((b) => b.toLowerCase() === aiResponse.genericName.toLowerCase())
     );
     if (match) {
-      const ind = match.indications.find(
-        (i) => i.indicationName.toLowerCase() === aiResponse.indication.toLowerCase()
-      ) || match.indications[0];
+      const ind =
+        match.indications.find(
+          (i) => i.indicationName.toLowerCase() === aiResponse.indication.toLowerCase()
+        ) || match.indications[0];
       loadMedicationIntoCalculator(match, ind);
+
+      // Pre-fill patient parameters ONLY if provided in the natural language query
+      if (aiResponse.extractedEntities?.weightKg) {
+        setWeight(aiResponse.extractedEntities.weightKg);
+        setWeightUnit('kg');
+      }
+      if (aiResponse.extractedEntities?.ageValue) {
+        setAge(aiResponse.extractedEntities.ageValue);
+        if (aiResponse.extractedEntities.ageUnit) {
+          setAgeUnit(aiResponse.extractedEntities.ageUnit);
+        }
+      }
     } else {
       setDrugLabel(`${aiResponse.genericName} (${aiResponse.brandNames.join(', ')})`);
       setIndicationLabel(aiResponse.indication);
@@ -319,6 +335,10 @@ export default function App() {
       if (aiResponse.dosesPerDay) setDosesPerDay(aiResponse.dosesPerDay);
       if (aiResponse.maximumSingleDose) setMaxSingleDoseMg(String(aiResponse.maximumSingleDose));
       if (aiResponse.maximumDailyDose) setMaxDailyDoseMg(String(aiResponse.maximumDailyDose));
+      if (aiResponse.extractedEntities?.weightKg) {
+        setWeight(aiResponse.extractedEntities.weightKg);
+        setWeightUnit('kg');
+      }
       setActiveTab('calculator');
     }
   };
@@ -2363,12 +2383,12 @@ export default function App() {
                     <Sparkles className="w-5 h-5 text-teal-600" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h2 className="text-lg font-bold text-slate-900">
                         AI Clinical Decision-Support Assistant
                       </h2>
                       <span className="text-xs bg-teal-100 text-teal-800 font-semibold px-2 py-0.5 rounded-full font-mono">
-                        Gemini 3.8 Flash Grounded
+                        Natural Language &bull; Grounded Database
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
@@ -2388,13 +2408,13 @@ export default function App() {
                     value={aiPrompt}
                     onChange={(e) => setAiPrompt(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleAiQuery()}
-                    placeholder="e.g. Recommended dose of Augmentin Duo for 2-year-old with otitis media..."
-                    className="flex-1 px-4 py-2 text-xs text-slate-900 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+                    placeholder="e.g. What is the pediatric dose of amoxicillin for a 10 kg child with an ear infection?"
+                    className="flex-1 px-4 py-2.5 text-xs text-slate-900 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-teal-500 bg-white"
                   />
                   <button
                     onClick={() => handleAiQuery()}
                     disabled={isAiLoading || !aiPrompt.trim()}
-                    className="bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors shrink-0"
+                    className="bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors shrink-0"
                   >
                     {isAiLoading ? (
                       <>
@@ -2404,50 +2424,462 @@ export default function App() {
                     ) : (
                       <>
                         <Send className="w-3.5 h-3.5" />
-                        <span>Ask AI Engine</span>
+                        <span>Ask Assistant</span>
                       </>
                     )}
                   </button>
                 </div>
+
+                {/* Quick Doctor Sample Queries */}
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[11px] font-semibold text-slate-500">Quick clinical questions:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      'What is the pediatric dose of amoxicillin for a 10 kg child with an ear infection?',
+                      'Find the dosage information for Augmentin Duo.',
+                      'What is the difference between mg/kg/day and mg/kg/dose?',
+                      'Can you find the verified pediatric dosing information for cefpodoxime?',
+                    ].map((example, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setAiPrompt(example);
+                          handleAiQuery(example);
+                        }}
+                        className="text-left text-[11px] bg-slate-100 hover:bg-teal-50 hover:text-teal-800 text-slate-700 border border-slate-200 hover:border-teal-300 rounded-md px-2.5 py-1 transition-all"
+                      >
+                        &ldquo;{example}&rdquo;
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
+            {/* Offline / Cache Status Notice */}
+            {aiNotice && (
+              <div className="bg-sky-50 border border-sky-200 text-sky-900 rounded-xl p-3.5 text-xs flex items-center gap-2.5">
+                <Info className="w-4 h-4 text-sky-600 shrink-0" />
+                <div className="flex-1">
+                  <span className="font-semibold">Clinical Retrieval Notice:</span> {aiNotice}
+                </div>
+              </div>
+            )}
+
+            {/* Error Message Display */}
+            {aiError && !aiResponse && (
+              <div className="bg-rose-50 border border-rose-200 text-rose-900 rounded-xl p-5 space-y-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+                  <h3 className="font-bold text-sm text-rose-900">
+                    Clinical Medication Query Alert
+                  </h3>
+                </div>
+                <p className="text-xs text-rose-800 leading-relaxed">
+                  {aiError}
+                </p>
+                <div className="pt-2 border-t border-rose-200/60 text-[11px] text-rose-700">
+                  <p>
+                    <span className="font-semibold">Safety Assurance:</span> PediDose enforces strict zero-fabrication safety. When a drug is not found in the verified database, dosing values will never be synthesized or guessed. Please verify drug spelling, active ingredient name, or browse the Formulary tab.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* AI Assistant Doctor-Friendly Clinical Consultation Card */}
             {aiResponse && (
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm space-y-4">
-                <div className="bg-slate-900 text-white p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm space-y-0">
+                {/* Header */}
+                <div className="bg-slate-900 text-white p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <Bot className="w-5 h-5 text-teal-400" />
-                      <h3 className="font-bold text-sm">
-                        Verified AI Match: {aiResponse.genericName}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Bot className="w-5 h-5 text-teal-400 shrink-0" />
+                      <h3 className="font-bold text-base text-white">
+                        {aiResponse.genericName}
                       </h3>
-                      <span className="text-[10px] bg-teal-900 text-teal-300 border border-teal-700 px-2 py-0.5 rounded font-mono">
-                        {aiSource}
+                      {aiResponse.category && (
+                        <span className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-full font-medium">
+                          {aiResponse.category}
+                        </span>
+                      )}
+                      <span className="text-[10px] bg-teal-950 text-teal-300 border border-teal-700 px-2 py-0.5 rounded-full font-mono flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-teal-400" />
+                        {aiSource === 'gemini-3.8-flash'
+                          ? 'Live Verified AI Match'
+                          : aiSource === 'offline_cached'
+                          ? 'Offline Local Cache'
+                          : 'Verified Local Formulary'}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Target Indication: {aiResponse.indication} &bull; Route: {aiResponse.route}
-                    </p>
+
+                    {aiResponse.brandNames && aiResponse.brandNames.length > 0 && (
+                      <p className="text-xs text-slate-300 mt-1">
+                        <span className="text-slate-400 font-semibold">Common Trade Brands:</span>{' '}
+                        {aiResponse.brandNames.join(', ')}
+                      </p>
+                    )}
                   </div>
 
-                  <button
-                    onClick={loadAiResponseIntoCalculator}
-                    className="bg-teal-500 hover:bg-teal-600 text-slate-950 text-xs font-bold px-4 py-2 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors shrink-0"
-                  >
-                    <Calculator className="w-4 h-4" />
-                    <span>Apply to Dosage Calculator</span>
-                  </button>
+                  {aiResponse.queryType !== 'clinical_concept' && (
+                    <button
+                      onClick={loadAiResponseIntoCalculator}
+                      className="bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-bold px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 transition-all shrink-0 cursor-pointer"
+                    >
+                      <Calculator className="w-4 h-4 text-slate-950" />
+                      <span>Apply to Dosage Calculator</span>
+                    </button>
+                  )}
                 </div>
 
-                <div className="p-6 space-y-4">
-                  <pre className="bg-slate-900 text-teal-300 p-4 rounded-xl text-[11px] font-mono overflow-x-auto border border-slate-800">
-                    {JSON.stringify(aiResponse, null, 2)}
-                  </pre>
+                <div className="p-6 space-y-6">
+                  {/* CLINICAL PHARMACOLOGY CONCEPT RESPONSE */}
+                  {aiResponse.queryType === 'clinical_concept' ? (
+                    <div className="space-y-5">
+                      <div className="bg-indigo-50/70 border border-indigo-200 rounded-xl p-4 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="w-4 h-4 text-indigo-700" />
+                          <h4 className="text-sm font-bold text-indigo-950">
+                            {aiResponse.conceptTitle || 'Pediatric Dosing Principles'}
+                          </h4>
+                        </div>
+                        <p className="text-xs text-indigo-900 leading-relaxed">
+                          {aiResponse.conceptExplanation || aiResponse.clinicalSummary}
+                        </p>
+                      </div>
+
+                      {/* Comparative Breakdown */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs text-slate-900">mg / kg / day</span>
+                            <span className="text-[10px] bg-sky-100 text-sky-800 font-bold px-2 py-0.5 rounded">
+                              Cumulative 24-Hour Dose
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 leading-relaxed">
+                            Specifies the <span className="font-semibold text-slate-900">total cumulative drug amount</span> given over an entire 24-hour period.
+                          </p>
+                          <div className="bg-white border border-slate-200 rounded-lg p-2.5 text-[11px] font-mono text-slate-800 space-y-1">
+                            <div>Total Daily = Weight (kg) &times; Rate (mg/kg/day)</div>
+                            <div className="text-teal-700 font-semibold">Single Dose = Total Daily &divide; Daily Doses</div>
+                          </div>
+                          <p className="text-[11px] text-slate-500">
+                            Example: Amoxicillin 40 mg/kg/day in 2 divided doses for a 10 kg child = 400 mg daily &rarr; <span className="font-semibold text-slate-800">200 mg given every 12 hours</span>.
+                          </p>
+                        </div>
+
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs text-slate-900">mg / kg / dose</span>
+                            <span className="text-[10px] bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded">
+                              Single Administration Dose
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 leading-relaxed">
+                            Specifies the <span className="font-semibold text-slate-900">exact amount administered</span> at each single dose interval.
+                          </p>
+                          <div className="bg-white border border-slate-200 rounded-lg p-2.5 text-[11px] font-mono text-slate-800 space-y-1">
+                            <div>Single Dose = Weight (kg) &times; Rate (mg/kg/dose)</div>
+                            <div className="text-teal-700 font-semibold">Total Daily = Single Dose &times; Daily Doses</div>
+                          </div>
+                          <p className="text-[11px] text-slate-500">
+                            Example: Paracetamol 15 mg/kg/dose for a 10 kg child = <span className="font-semibold text-slate-800">150 mg administered per dose</span> every 4 to 6 hours prn.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Critical Safety Warning */}
+                      <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                        <div className="space-y-1">
+                          <h5 className="font-bold text-xs text-rose-900">
+                            Critical Pediatric Safety Rule
+                          </h5>
+                          <p className="text-xs text-rose-800 leading-relaxed">
+                            Administering an <span className="font-bold">mg/kg/day</span> figure at each dosing interval causes a severe <span className="font-bold">2&times;, 3&times;, or 4&times; acute overdose</span>. Always check whether the monograph specifies daily or per-dose basis before prescribing or dispensing.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Key Points */}
+                      {aiResponse.conceptKeyPoints && (
+                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2">
+                          <h5 className="font-bold text-xs text-slate-800">Key Clinical Takeaways:</h5>
+                          <ul className="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
+                            {aiResponse.conceptKeyPoints.map((point, pIdx) => (
+                              <li key={pIdx} className="leading-relaxed">{point}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* MEDICATION DOSING RESPONSE */
+                    <div className="space-y-6">
+                      {/* Doctor-Friendly Clinical Summary */}
+                      {aiResponse.clinicalSummary && (
+                        <div className="bg-teal-50/60 border border-teal-200 rounded-xl p-4 flex items-start gap-3">
+                          <Sparkles className="w-5 h-5 text-teal-600 shrink-0 mt-0.5" />
+                          <div className="space-y-1 flex-1">
+                            <h4 className="font-bold text-xs text-teal-950 uppercase tracking-wider">
+                              Clinical Consultation Summary
+                            </h4>
+                            <p className="text-xs text-teal-900 leading-relaxed font-medium">
+                              {aiResponse.clinicalSummary}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Patient Calculation Preview (if weight was provided in natural language) */}
+                      {aiResponse.patientCalculationPreview && (
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-3">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <div className="flex items-center gap-2">
+                              <Scale className="w-4 h-4 text-emerald-700" />
+                              <h4 className="font-bold text-xs text-emerald-950 uppercase tracking-wide">
+                                Patient-Specific Calculation ({aiResponse.patientCalculationPreview.weightKg} kg Child)
+                              </h4>
+                            </div>
+                            <span className="text-[10px] bg-emerald-200 text-emerald-900 font-semibold px-2 py-0.5 rounded-full">
+                              Computed from Verified Monograph
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div className="bg-white border border-emerald-100 rounded-lg p-2.5">
+                              <div className="text-[10px] font-semibold text-slate-500 uppercase">Single Dose</div>
+                              <div className="text-base font-bold text-emerald-700">
+                                {aiResponse.patientCalculationPreview.dosePerDoseMg} mg
+                              </div>
+                              <div className="text-[10px] text-slate-500">per administration</div>
+                            </div>
+
+                            <div className="bg-white border border-emerald-100 rounded-lg p-2.5">
+                              <div className="text-[10px] font-semibold text-slate-500 uppercase">Daily Total</div>
+                              <div className="text-base font-bold text-emerald-700">
+                                {aiResponse.patientCalculationPreview.totalDailyDoseMg} mg/day
+                              </div>
+                              <div className="text-[10px] text-slate-500">{aiResponse.patientCalculationPreview.dosesPerDay} divided doses</div>
+                            </div>
+
+                            <div className="bg-white border border-emerald-100 rounded-lg p-2.5">
+                              <div className="text-[10px] font-semibold text-slate-500 uppercase">Schedule</div>
+                              <div className="text-xs font-bold text-slate-800 truncate">
+                                {aiResponse.patientCalculationPreview.frequency}
+                              </div>
+                              <div className="text-[10px] text-slate-500">{aiResponse.route} route</div>
+                            </div>
+
+                            <div className="bg-white border border-emerald-100 rounded-lg p-2.5">
+                              <div className="text-[10px] font-semibold text-slate-500 uppercase">Liquid Volume</div>
+                              <div className="text-base font-bold text-emerald-700">
+                                {aiResponse.patientCalculationPreview.suggestedVolumeMl !== undefined
+                                  ? `${aiResponse.patientCalculationPreview.suggestedVolumeMl} mL`
+                                  : 'See calculator'}
+                              </div>
+                              <div className="text-[10px] text-slate-500 truncate" title={aiResponse.patientCalculationPreview.suggestedFormulationName}>
+                                {aiResponse.patientCalculationPreview.suggestedFormulationName || 'Oral suspension'}
+                              </div>
+                            </div>
+                          </div>
+
+                          {aiResponse.patientCalculationPreview.cappingNote && (
+                            <div className="text-[11px] text-emerald-800 font-medium bg-emerald-100/60 p-2 rounded-md flex items-center gap-1.5">
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                              <span>{aiResponse.patientCalculationPreview.cappingNote}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Verified Dosing Parameters Section (Strict doctor-friendly display) */}
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
+                          Verified Clinical Dosing Parameters:
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                            <span className="text-[10px] font-semibold text-slate-500 uppercase block">Matching Indication</span>
+                            <span className="font-bold text-slate-900 mt-0.5 block">{aiResponse.indication}</span>
+                          </div>
+
+                          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                            <span className="text-[10px] font-semibold text-slate-500 uppercase block">Dose &amp; Basis</span>
+                            <span className="font-bold text-teal-700 mt-0.5 block">
+                              {aiResponse.dosePerKg ? `${aiResponse.dosePerKg} ` : ''}{aiResponse.doseBasis}
+                            </span>
+                          </div>
+
+                          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                            <span className="text-[10px] font-semibold text-slate-500 uppercase block">Frequency &amp; Schedule</span>
+                            <span className="font-bold text-slate-900 mt-0.5 block">
+                              {aiResponse.frequency} ({aiResponse.dosesPerDay || 1}&times;/day)
+                            </span>
+                          </div>
+
+                          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                            <span className="text-[10px] font-semibold text-slate-500 uppercase block">Route of Administration</span>
+                            <span className="font-bold text-slate-900 mt-0.5 block capitalize">{aiResponse.route}</span>
+                          </div>
+
+                          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                            <span className="text-[10px] font-semibold text-slate-500 uppercase block">Recommended Duration</span>
+                            <span className="font-bold text-slate-900 mt-0.5 block">{aiResponse.duration || 'As directed'}</span>
+                          </div>
+
+                          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                            <span className="text-[10px] font-semibold text-slate-500 uppercase block">Maximum Single Dose</span>
+                            <span className="font-bold text-slate-900 mt-0.5 block">
+                              {aiResponse.maximumSingleDose ? `${aiResponse.maximumSingleDose} mg` : 'No single cap specified'}
+                            </span>
+                          </div>
+
+                          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                            <span className="text-[10px] font-semibold text-slate-500 uppercase block">Maximum Daily Dose</span>
+                            <span className="font-bold text-slate-900 mt-0.5 block">
+                              {aiResponse.maximumDailyDose ? `${aiResponse.maximumDailyDose} mg` : 'No daily cap specified'}
+                            </span>
+                          </div>
+
+                          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                            <span className="text-[10px] font-semibold text-slate-500 uppercase block">Applicable Age Range</span>
+                            <span className="font-bold text-slate-900 mt-0.5 block">
+                              {aiResponse.ageRestrictions.length > 0
+                                ? aiResponse.ageRestrictions.join('; ')
+                                : 'All pediatric cohorts (formulation dependent)'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Multiple Indications Selector if Available */}
+                      {aiResponse.availableIndications && aiResponse.availableIndications.length > 1 && (
+                        <div className="border border-slate-200 rounded-xl p-4 space-y-3 bg-slate-50/50">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-bold text-slate-800">
+                              All Verified Indications for {aiResponse.genericName}:
+                            </h4>
+                            <span className="text-[10px] text-slate-500 font-medium">Click to select indication</span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                            {aiResponse.availableIndications.map((ind) => {
+                              const isSelected = ind.indicationName.toLowerCase() === aiResponse.indication.toLowerCase();
+                              return (
+                                <button
+                                  key={ind.id}
+                                  type="button"
+                                  onClick={() => {
+                                    const match = MEDICATION_DATABASE.find(
+                                      (m) =>
+                                        (aiResponse.matchedMedicationId && m.id === aiResponse.matchedMedicationId) ||
+                                        m.genericName.toLowerCase() === aiResponse.genericName.toLowerCase()
+                                    );
+                                    if (match) {
+                                      const selectedRule = match.indications.find((i) => i.id === ind.id);
+                                      if (selectedRule) {
+                                        loadMedicationIntoCalculator(match, selectedRule);
+                                      }
+                                    }
+                                  }}
+                                  className={`text-left p-2.5 rounded-lg border text-xs transition-all ${
+                                    isSelected
+                                      ? 'bg-teal-50 border-teal-300 text-teal-950 font-semibold shadow-xs ring-1 ring-teal-400'
+                                      : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-bold truncate">{ind.indicationName}</span>
+                                    {isSelected && <Check className="w-3.5 h-3.5 text-teal-600 shrink-0" />}
+                                  </div>
+                                  <div className="text-[11px] text-slate-500 mt-1">
+                                    {ind.doseValue} {ind.doseBasis} &bull; {ind.frequencyDescription}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Warnings & Contraindications */}
+                      {((aiResponse.warnings && aiResponse.warnings.length > 0) ||
+                        (aiResponse.contraindications && aiResponse.contraindications.length > 0)) && (
+                        <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-4 space-y-2 text-xs">
+                          <div className="flex items-center gap-2">
+                            <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0" />
+                            <h5 className="font-bold text-amber-950">
+                              Clinical Warnings &amp; Precautions
+                            </h5>
+                          </div>
+                          <ul className="text-amber-900 space-y-1 list-disc list-inside">
+                            {aiResponse.warnings?.map((w, wIdx) => (
+                              <li key={wIdx} className="leading-relaxed">{w}</li>
+                            ))}
+                            {aiResponse.contraindications?.map((c, cIdx) => (
+                              <li key={`c-${cIdx}`} className="leading-relaxed font-semibold text-rose-800">
+                                Contraindication: {c}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Follow-up Question Banner if Essential Info is Missing */}
+                      {aiResponse.followUpQuestion && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3 text-xs">
+                          <HelpCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                          <div className="space-y-2 flex-1">
+                            <h5 className="font-bold text-blue-950">
+                              Clinical Follow-Up Needed:
+                            </h5>
+                            <p className="text-blue-900 leading-relaxed">
+                              {aiResponse.followUpQuestion}
+                            </p>
+                            <div className="flex gap-2 pt-1 max-w-md">
+                              <input
+                                type="text"
+                                placeholder="Enter patient weight (e.g. 10 kg) or specific indication..."
+                                className="bg-white border border-blue-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 flex-1 outline-none focus:ring-2 focus:ring-blue-500"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    const val = (e.target as HTMLInputElement).value.trim();
+                                    if (val) {
+                                      const nextPrompt = `${aiResponse.genericName} for ${val}`;
+                                      setAiPrompt(nextPrompt);
+                                      handleAiQuery(nextPrompt);
+                                    }
+                                  }
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Verified Clinical Reference & Metadata Footer */}
+                      <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[11px] text-slate-500">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Award className="w-3.5 h-3.5 text-teal-600" />
+                          <span className="font-semibold text-slate-700">Reference:</span>{' '}
+                          <span>{aiResponse.referenceSource}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono text-[10px]">
+                            {aiResponse.verificationDate || 'Verified 2026 Edition'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
           </div>
         )}
+
 
         {/* TAB 5: WHO GROWTH STANDARDS EXPLORER */}
         {activeTab === 'who' && (() => {

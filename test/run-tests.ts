@@ -558,6 +558,42 @@ describe('Phase 5: Gemini AI Structured Grounding & Section 6 Schema Compliance'
     assertEqual(pcmQuery!.genericName, 'Paracetamol');
   });
 
+  it('Resolves clinical concept: difference between mg/kg/day and mg/kg/dose', () => {
+    const concept = resolveLocalDatabaseMatch('What is the difference between mg/kg/day and mg/kg/dose?');
+    assertTrue(!!concept, 'Should resolve pharmacology concept query');
+    assertEqual(concept!.queryType, 'clinical_concept');
+    assertTrue(concept!.conceptExplanation!.includes('24 hours'));
+    assertTrue(concept!.conceptExplanation!.includes('mg/kg/dose'));
+    assertTrue(concept!.warnings!.some((w) => w.includes('overdose') || w.includes('HIGH-RISK')));
+  });
+
+  it('Extracts patient weight and generates accurate calculation preview for 10 kg child with ear infection', () => {
+    const query = 'What is the pediatric dose of amoxicillin for a 10 kg child with an ear infection?';
+    const result = resolveLocalDatabaseMatch(query);
+    assertTrue(!!result, 'Should resolve query with amoxicillin for 10 kg child');
+    assertEqual(result!.genericName, 'Amoxicillin');
+    assertTrue(result!.indication.includes('Otitis Media'));
+    assertTrue(result!.patientCalculationPreview !== undefined, 'Patient calculation preview must be present');
+    assertEqual(result!.patientCalculationPreview?.weightKg, 10);
+    assertEqual(result!.patientCalculationPreview?.totalDailyDoseMg, 900); // 90 mg/kg/day * 10 kg
+    assertEqual(result!.patientCalculationPreview?.dosePerDoseMg, 450); // 900 / 2 doses
+    assertEqual(result!.patientCalculationPreview?.dosesPerDay, 2);
+    assertTrue(result!.patientCalculationPreview?.suggestedVolumeMl !== undefined);
+  });
+
+  it('Retrieves verified dosing for Cefpodoxime with multiple available indications', () => {
+    const result = resolveLocalDatabaseMatch('Can you find the verified pediatric dosing information for cefpodoxime?');
+    assertTrue(!!result, 'Should resolve cefpodoxime query');
+    assertEqual(result!.genericName, 'Cefpodoxime Proxetil');
+    assertTrue(result!.availableIndications !== undefined && result!.availableIndications.length >= 2);
+    assertTrue(result!.formulations.some((f) => f.includes('Dry Syrup') || f.includes('Suspension')));
+  });
+
+  it('Enforces zero-fabrication: unknown medication returns null without guessing dosing', () => {
+    const result = resolveLocalDatabaseMatch('What is the pediatric dose of roxithromycin for 10 kg child?');
+    assertEqual(result, null, 'Must return null for unverified drugs and never synthesize doses');
+  });
+
   it('Builds grounded system instruction containing verified database catalog', () => {
     const groundingText = buildDatabaseGroundingSummary();
     assertTrue(groundingText.includes('VERIFIED PEDIATRIC MEDICATION DATABASE'));

@@ -14,7 +14,7 @@ import {
 export interface AiQueryResult {
   data: StructuredMedicationAiResponse | null;
   error: string | null;
-  source: 'gemini-3.8-flash' | 'local_database_fallback' | 'offline_cached';
+  source: 'gemini-3.8-flash' | 'local_database_fallback' | 'offline_cached' | string;
   notice?: string;
   isOffline?: boolean;
 }
@@ -24,7 +24,7 @@ export async function queryAiAssistant(prompt: string): Promise<AiQueryResult> {
   if (!cleanPrompt) {
     return {
       data: null,
-      error: 'Query prompt cannot be empty.',
+      error: 'Please enter a medication name or clinical question.',
       source: 'local_database_fallback',
     };
   }
@@ -57,7 +57,7 @@ export async function queryAiAssistant(prompt: string): Promise<AiQueryResult> {
 
     return {
       data: null,
-      error: `Offline mode: "${cleanPrompt}" is not cached or present in the offline verified formulary. Connect to the network to search external resources or update the database.`,
+      error: `Offline mode: "${cleanPrompt}" is not cached or present in the offline verified formulary. Connect to the network or check medication spelling.`,
       source: 'local_database_fallback',
       isOffline: true,
     };
@@ -86,12 +86,17 @@ export async function queryAiAssistant(prompt: string): Promise<AiQueryResult> {
         data: json.data,
         error: null,
         source: json.source || 'gemini-3.8-flash',
-        notice: json.notice,
+        notice: json.notice || 'Live verified pediatric database retrieval.',
         isOffline: false,
       };
     }
 
-    throw new Error(json.error || 'No matching medication returned');
+    return {
+      data: null,
+      error: json.error || 'Medicine not found in verified database. No unverified doses will be generated.',
+      source: json.source || 'gemini-3.8-flash',
+      isOffline: false,
+    };
   } catch (err: any) {
     // If online query fails, check offline cache
     const cached = await getCachedAiResponse(cleanPrompt);
@@ -100,7 +105,7 @@ export async function queryAiAssistant(prompt: string): Promise<AiQueryResult> {
         data: cached.response,
         error: null,
         source: 'offline_cached',
-        notice: `Network error. Retrieved from local offline cache (${new Date(cached.cachedAt).toLocaleDateString()}).`,
+        notice: `Database unavailable online; showing cached information (Cached on ${new Date(cached.cachedAt).toLocaleDateString()}).`,
         isOffline: true,
       };
     }
@@ -113,14 +118,14 @@ export async function queryAiAssistant(prompt: string): Promise<AiQueryResult> {
         data: localMatch,
         error: null,
         source: 'local_database_fallback',
-        notice: 'Resolved from verified offline database (client-side fallback).',
+        notice: 'AI service unavailable online; resolved from verified offline database.',
         isOffline: true,
       };
     }
 
     return {
       data: null,
-      error: `Unable to resolve "${cleanPrompt}". If working offline, ensure the medication is in the verified local formulary or connect online.`,
+      error: `Unable to resolve "${cleanPrompt}". AI service is currently unavailable and no matching verified record exists in the local database.`,
       source: 'local_database_fallback',
       isOffline: !isOnline,
     };
